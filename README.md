@@ -7,3 +7,5 @@ References
 - https://github.com/ROBOTIS-GIT/dynamixel-workbench/tree/noetic-devel
 - https://github.com/ROBOTIS-GIT/dynamixel-workbench-msgs/tree/noetic-devel
 - https://github.com/ROBOTIS-GIT/DynamixelSDK/tree/noetic-devel
+- https://github.com/IntelRealSense/realsense-ros
+- https://github.com/noahmr/yolov5-tensorrt
