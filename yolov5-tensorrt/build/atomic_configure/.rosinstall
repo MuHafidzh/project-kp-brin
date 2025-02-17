@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/bagas/ProgramRobot/project_kp/realsense/src/yolov5-tensorrt/build/devel/setup.sh

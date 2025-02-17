@@ -1,0 +1,9 @@
+Book
+Bottle
+Chair
+Dispenser
+Door
+Glass
+Laptop
+Person
+Table
