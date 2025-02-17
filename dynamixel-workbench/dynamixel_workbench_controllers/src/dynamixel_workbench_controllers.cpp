@@ -68,7 +68,7 @@ bool DynamixelController::getDynamixelsInfo(const std::string yaml_file)
   YAML::Node dynamixel;
   dynamixel = YAML::LoadFile(yaml_file.c_str());
 
-  if (dynamixel == NULL)
+  if (dynamixel.IsNull())
     return false;
 
   for (YAML::const_iterator it_file = dynamixel.begin(); it_file != dynamixel.end(); it_file++)
@@ -323,6 +323,7 @@ void DynamixelController::initSubscriber()
 {
   trajectory_sub_ = priv_node_handle_.subscribe("joint_trajectory", 100, &DynamixelController::trajectoryMsgCallback, this);
   if (is_cmd_vel_topic_) cmd_vel_sub_ = priv_node_handle_.subscribe("cmd_vel", 10, &DynamixelController::commandVelocityCallback, this);
+  mode_sub = priv_node_handle_.subscribe("mode", 10, &DynamixelController::operatingModeCallback, this);
 }
 
 void DynamixelController::initServer()
@@ -756,6 +757,38 @@ bool DynamixelController::dynamixelCommandMsgCallback(dynamixel_workbench_msgs::
   res.comm_result = result;
 
   return true;
+}
+
+void DynamixelController::operatingModeCallback(const std_msgs::UInt8::ConstPtr& msg)
+{
+  const char* log;
+  uint8_t new_mode = msg->data;
+  // printf("New mode: %d\n", new_mode);
+  for (auto const& dxl : dynamixel_)
+  {
+    // Turn off torque
+    dxl_wb_->torqueOff((uint8_t)dxl.second);
+
+    // Change operating mode
+    if (new_mode == 3) // Position control mode
+    {
+      dxl_wb_->itemWrite((uint8_t)dxl.second, "Operating_Mode", 3, &log);
+      ROS_INFO("Changed to Position Control Mode for Dynamixel[ID : %d]", dxl.second);
+    }
+    else if (new_mode == 1) // Velocity control mode
+    {
+      dxl_wb_->itemWrite((uint8_t)dxl.second, "Operating_Mode", 1, &log);
+      ROS_INFO("Changed to Velocity Control Mode for Dynamixel[ID : %d]", dxl.second);
+    }
+    else
+    {
+      ROS_ERROR("Invalid mode requested");
+      return;
+    }
+
+    // Turn on torque
+    dxl_wb_->torqueOn((uint8_t)dxl.second);
+  }
 }
 
 int main(int argc, char **argv)

@@ -43,7 +43,7 @@ int readValue(int gpio) {
 class GPIOControl {
 public:
     GPIOControl() {
-        gpios_ = {422, 393, 448, 482, 424, 429, 447, 446};
+        gpios_ = {421, 422, 393, 448, 482, 429, 447, 446};
         prev_values_ = std::vector<int>(8, -1); // Initialize with -1 to ensure the first write happens
 
         // Export GPIOs and set direction to output

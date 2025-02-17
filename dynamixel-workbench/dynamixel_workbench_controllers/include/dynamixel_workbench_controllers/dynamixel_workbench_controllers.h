@@ -25,6 +25,7 @@
 
 #include <sensor_msgs/JointState.h>
 #include <geometry_msgs/Twist.h>
+#include <std_msgs/UInt8.h>
 #include <trajectory_msgs/JointTrajectory.h>
 #include <trajectory_msgs/JointTrajectoryPoint.h>
 
@@ -65,6 +66,8 @@ class DynamixelController
   // ROS Topic Subscriber
   ros::Subscriber cmd_vel_sub_;
   ros::Subscriber trajectory_sub_;
+
+  ros::Subscriber mode_sub;
 
   // ROS Service Server
   ros::ServiceServer dynamixel_command_server_;
@@ -124,6 +127,7 @@ class DynamixelController
 
   void commandVelocityCallback(const geometry_msgs::Twist::ConstPtr &msg);
   void trajectoryMsgCallback(const trajectory_msgs::JointTrajectory::ConstPtr &msg);
+  void operatingModeCallback(const std_msgs::UInt8::ConstPtr &msg);
   bool dynamixelCommandMsgCallback(dynamixel_workbench_msgs::DynamixelCommand::Request &req,
                                    dynamixel_workbench_msgs::DynamixelCommand::Response &res);
 };
