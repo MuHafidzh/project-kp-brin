@@ -1,0 +1,83 @@
+<launch>
+  <!-- Arguments -->
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="map_file" default="$(find turtlebot3_navigation)/maps/map.yaml"/>
+  <arg name="open_rviz" default="true"/>
+  <arg name="move_forward_only" default="false"/>
+
+  <!-- Turtlebot3 -->
+  <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
+    <arg name="model" value="$(arg model)" />
+  </include>
+
+  <!-- Map server -->
+  <!-- <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/> -->
+
+  <!-- AMCL -->
+  <!-- <include file="$(find turtlebot3_navigation)/launch/amcl.launch"/> -->
+
+  <!-- move_base -->
+  <include file="$(find turtlebot3_navigation)/launch/move_base_dwa.launch">
+    <arg name="model" value="$(arg model)" />
+    <arg name="move_forward_only" value="$(arg move_forward_only)"/>
+  </include>
+
+  <node name="tf_broadcaster_node" pkg="tf_broadcaster" type="tf_broadcaster" />
+  <include file="$(find rplidar_ros)/launch/rplidar_a2m8.launch">
+  </include>
+
+  <!-- rviz -->
+  <!-- <group if="$(arg open_rviz)"> 
+    <node pkg="rviz" type="rviz" name="rviz" required="true"
+          args="-d $(find turtlebot3_navigation)/rviz/turtlebot3_navigation.rviz"/>
+
+  </group> -->
+
+          <node pkg="rosbag" type="record" name="rosbag_record_nav" output="screen"
+          args="-O $(find tf_broadcaster)/rec1.bag 
+          /cmd_vel
+          /initialpose
+          /joint_states
+          /map
+          /map_updates
+          /move_base/DWAPlannerROS/cost_cloud
+          /move_base/DWAPlannerROS/global_plan
+          /move_base/DWAPlannerROS/local_plan
+          /move_base/DWAPlannerROS/parameter_descriptions
+          /move_base/DWAPlannerROS/parameter_updates
+          /move_base/DWAPlannerROS/trajectory_cloud
+          /move_base/NavfnROS/plan
+          /move_base/cancel
+          /move_base/current_goal
+          /move_base/feedback
+          /move_base/global_costmap/costmap
+          /move_base/global_costmap/costmap_updates
+          /move_base/global_costmap/footprint
+          /move_base/global_costmap/inflation_layer/parameter_descriptions
+          /move_base/global_costmap/inflation_layer/parameter_updates
+          /move_base/global_costmap/obstacle_layer/parameter_descriptions
+          /move_base/global_costmap/obstacle_layer/parameter_updates
+          /move_base/global_costmap/parameter_descriptions
+          /move_base/global_costmap/parameter_updates
+          /move_base/goal
+          /move_base/local_costmap/costmap
+          /move_base/local_costmap/costmap_updates
+          /move_base/local_costmap/footprint
+          /move_base/local_costmap/inflation_layer/parameter_descriptions
+          /move_base/local_costmap/inflation_layer/parameter_updates
+          /move_base/local_costmap/obstacle_layer/parameter_descriptions
+          /move_base/local_costmap/obstacle_layer/parameter_updates
+          /move_base/local_costmap/parameter_descriptions
+          /move_base/local_costmap/parameter_updates
+          /move_base/parameter_descriptions
+          /move_base/parameter_updates
+          /move_base/recovery_status
+          /move_base/result
+          /move_base/status
+          /move_base_simple/goal
+          /odom
+          /particlecloud
+          /scan
+          /tf
+          /tf_static" />
+</launch>

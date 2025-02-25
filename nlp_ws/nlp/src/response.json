@@ -1,0 +1,39 @@
+{
+    "conversation": {
+      "wake": [
+        "Hi!", "Hello!", "Hey there!", "Yes?", "I'm here!", "How can I help?", "Listening!", "Ready to assist!", "At your service!", "What do you need?", 
+        "Hello, what can I do for you?", "I am listening, go ahead.", "Yes, I am here.", "Hi there, what’s up?", "How may I assist you?", "Tell me what you need.", "Go ahead, I am ready.", "Yes, I am online.", "Speak up, I am ready.", "Hello! Need something?"
+      ],
+      "stop": [
+        "Stopping.", "Halting all actions.", "Understood, stopping.", "Pausing now.", "Stopped as requested.", "Okay, I'll stop.", "Ceasing movement.", "Action terminated.", "Done stopping.", "Command acknowledged, stopping.",
+        "Alright, stopping now.", "I’ll stop immediately.", "All actions are halted.", "Command received, stopping.", "Halting functions.", "Stopping all active tasks.", "Shutting down movement.", "I will pause now.", "Action has been stopped.", "Stopped successfully."
+      ],
+      "obj": [
+        "Okay, looking for {obj}.", "Searching for {obj}.", "Locating {obj} now.", "I’ll find {obj} for you.", "Scanning area for {obj}.", "Tracking {obj} in progress.", "Checking surroundings for {obj}.", "Finding {obj}, please wait.", "I'll try to locate {obj}.", "Let me find {obj} for you.",
+        "Looking around for {obj}.", "Hold on, finding {obj}.", "Searching database for {obj}.", "I am detecting {obj} now.", "{obj} is being searched for.", "Tracking down {obj}.", "Let’s see where {obj} is.", "Give me a moment, locating {obj}.", "I will track {obj} now.", "Scanning for {obj} as requested."
+      ]
+    },
+    "info": {
+      "scan": [
+        "Searching for {scan_obj}.", "Scanning for {scan_obj}.", "Scanning now, please wait.", "Looking for {scan_obj}.", "Checking my surroundings for {scan_obj}.", "Running scan for {scan_obj}.", "Scan in progress.", "Trying to detect {scan_obj}.", "Analyzing environment for {scan_obj}.", "Processing scan...",
+        "Examining area for {scan_obj}.", "Detecting {scan_obj} in range.", "Running environmental scan for {scan_obj}.", "Attempting to locate {scan_obj}.", "Scanning vicinity for {scan_obj}.", "Checking for presence of {scan_obj}.", "Starting search sequence for {scan_obj}.", "Detecting possible location of {scan_obj}.", "Investigating location of {scan_obj}.", "Full scan initiated for {scan_obj}."
+      ],
+      "calib": [
+        "Calibration completed.", "System calibrated successfully.", "Calibration done.", "Adjustments finished.", "Calibration finished.", "Setup complete.", "Everything is aligned now.", "Calibration process is done.", "All systems set, ready to go.", "Successful calibration.",
+        "System is now fully calibrated.", "Calibration process successfully executed.", "All systems optimized.", "System adjustments are finalized.", "Now running with optimized calibration.", "Robot fully calibrated and operational.", "Settings adjusted, calibration finished.", "Everything is aligned and set.", "Calibration cycle completed successfully.", "Fine-tuning complete, ready to function."
+      ],
+      "nfound": [
+        "There is no {nfound_obj} around you.", "I couldn’t find {nfound_obj}.", "{nfound_obj} is not in sight.", "No {nfound_obj} detected.", "Could not locate {nfound_obj}.", "Scanning complete, but no {nfound_obj} found.", "I checked, but {nfound_obj} is not here.", "No signs of {nfound_obj}.", "Tried looking, but no {nfound_obj} around.", "Sorry, no {nfound_obj} detected.",
+        "Searched everywhere, no {nfound_obj} in sight.", "I checked, but no {nfound_obj} found.", "{nfound_obj} is not present in this area.", "Still no trace of {nfound_obj}.", "Extensive scan complete, no {nfound_obj} detected.", "I’m afraid {nfound_obj} isn’t around.", "{nfound_obj} not found in my database.", "No {nfound_obj} within detection range.", "No positive match for {nfound_obj}.", "{nfound_obj} is currently out of reach."
+      ],
+      "success": [
+        "It's right in front of you.", "{obj} is within your reach.", "You can find {obj} nearby.", "{obj} is located close to you.", "I found {obj} for you!", "{obj} detected successfully.", "{obj} is directly ahead.", "You should see {obj} now.", "{obj} has been located!", "Target found: {obj}.",
+        "{obj} is visible from here.", "Right ahead, you will see {obj}.", "Good news! {obj} is right there.", "{obj} successfully found!", "Positive detection of {obj}.", "Navigation complete, {obj} reached.", "{obj} confirmed in visual range.", "{obj} is exactly where expected.", "Found {obj}, mission success!", "{obj} spotted!"
+      ],
+      "dir": [
+        "It's on your {dir}.", "{obj} is on your {dir}.", "Look to your {dir}.", "You’ll find {obj} to your {dir}.", "Move towards your {dir} to find {obj}.", "Check your {dir}, {obj} is there.", "{obj} should be on your {dir} side.", "To your {dir}, you will see {obj}.", "Turn {dir}, and you’ll spot {obj}.", "I detected {obj} on your {dir}.",
+        "Head {dir} to locate {obj}.", "Positioning shows {obj} to your {dir}.", "Adjust direction to {dir} for {obj}.", "You should find {obj} on the {dir}.", "Check around {dir} for {obj}.", "{obj} is placed towards your {dir}.", "Your {dir} side holds {obj}.", "Eyes on {obj}, it’s {dir}.", "Align your vision {dir} to see {obj}.", "Direction indicator shows {obj} at {dir}."
+      ]
+    }
+  }
+  

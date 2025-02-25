@@ -9,3 +9,8 @@ References
 - https://github.com/ROBOTIS-GIT/DynamixelSDK/tree/noetic-devel
 - https://github.com/IntelRealSense/realsense-ros
 - https://github.com/noahmr/yolov5-tensorrt
+- https://github.com/ROBOTIS-GIT/turtlebot3/tree/noetic-devel
+- https://github.com/ihuguet/picotts
+- https://pypi.org/project/SpeechRecognition/
+- https://alphacephei.com/vosk/
+- https://huggingface.co/docs/transformers/en/model_doc/distilbert
