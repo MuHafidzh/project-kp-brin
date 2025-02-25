@@ -7,7 +7,7 @@ times = []
 positions_8 = []
 positions_9 = []
 
-with open('tpid20.txt', 'r') as file:
+with open('pid20.txt', 'r') as file:
     for line in file:
         parts = line.strip().split(' || ')
         pos_part = parts[0].split(', ')
@@ -16,6 +16,10 @@ with open('tpid20.txt', 'r') as file:
         pos_8 = int(pos_part[0].split(': ')[1])
         pos_9 = int(pos_part[1].split(': ')[1])
         time = int(time_part)
+
+        # Convert positions to degrees
+        pos_8 = (pos_8 - 2048) * 360 / 4096
+        pos_9 = (pos_9 - 2048) * 360 / 4096
 
         positions_8.append(pos_8)
         positions_9.append(pos_9)
@@ -38,10 +42,10 @@ positions_9_smooth = make_interp_spline(unique_times, positions_9)(times_smooth)
 
 # Membuat plot
 plt.figure(figsize=(10, 5))
-plt.plot(times_smooth, positions_8_smooth, label='Position 8')
-plt.plot(times_smooth, positions_9_smooth, label='Position 9')
+plt.plot(times_smooth, positions_8_smooth, label='Pan (deg)')
+plt.plot(times_smooth, positions_9_smooth, label='Tilt (deg)')
 plt.xlabel('Time (s)')
-plt.ylabel('Position')
+plt.ylabel('Position (deg)')
 plt.title('Position vs Time')
 plt.legend()
 plt.grid(True)
