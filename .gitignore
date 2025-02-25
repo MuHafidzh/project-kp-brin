@@ -1,1 +1,5 @@
 .vscode/
+nlp_ws/**/*.engine
+nlp_ws/**/*.onnx
+nlp_ws/nlp/src/vosk_en_lgraph/graph/HCLr.fst
+nlp_ws/nlp/src/vosk_en_lgraph/am/final.mdl
