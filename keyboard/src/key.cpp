@@ -47,6 +47,8 @@ int main(int argc, char **argv) {
         {'U', 38}, {'D', 39}, {'R', 40}, {'L', 41} // Up, Down, Right, Left arrows
     };
 
+    printf("KEY NODE START\n");
+
     ros::Rate loop_rate(50);
     while (ros::ok()) {
         // Reset all key statuses to 0

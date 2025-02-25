@@ -1,0 +1,10 @@
+<launch>
+  <arg name="node_start_delay" default="5.0" />  
+
+
+  <include file="$(find dynamixel_workbench_controllers)/launch/dynamixel_controllers.launch">
+  </include>
+  <node name="gpio_node" pkg="gpio" type="gpio_node" />
+
+  <!-- <node name="dynamixel_workbench_controllers_coba_node" pkg="dynamixel_workbench_controllers" type="coba" launch-prefix="bash -c 'sleep $(arg node_start_delay); $0 $@' " /> -->
+</launch>

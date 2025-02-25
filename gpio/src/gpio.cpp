@@ -52,6 +52,7 @@ public:
             usleep(100000); // Sleep for 100ms to allow the export to complete
             setDirection(gpio, "out");
         }
+        printf("GPIO STARTO\n");
     }
 
     void gpioCallback(const std_msgs::Int32MultiArray::ConstPtr& msg) {

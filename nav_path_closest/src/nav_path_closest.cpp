@@ -16,6 +16,10 @@ void pathCallback(const nav_msgs::Path::ConstPtr &path_msg)
     geometry_msgs::PoseStamped nav_pose;
     size_t path_size = path_msg->poses.size();
     ROS_INFO("Size of path_msg: %zu", path_size);
+    if(path_size < 10){
+        ROS_WARN("Path size less than 10");
+        return;
+    }
 
     nav_pose = path_msg->poses[10];
     // multiply by -1 because default is inverted

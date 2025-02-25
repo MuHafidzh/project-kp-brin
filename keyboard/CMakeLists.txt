@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.6)
 project(keyboard)
+
+add_compile_options(-std=c++14)
+add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp

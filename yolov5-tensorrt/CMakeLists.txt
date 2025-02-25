@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.6)
 project(yolov5-tensorrt)
+
+add_compile_options(-std=c++14)
+add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Wall -Wextra -Wno-deprecated -fPIC")
 set(CMAKE_CXX_STANDARD 14)

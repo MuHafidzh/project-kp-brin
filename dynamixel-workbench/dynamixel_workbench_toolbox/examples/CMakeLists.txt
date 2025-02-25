@@ -1,7 +1,9 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.6)
 project(dynamixel_workbench)
 
-add_compile_options(-std=c++11)
+# add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
+add_definitions(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 
 include_directories(
   ../src

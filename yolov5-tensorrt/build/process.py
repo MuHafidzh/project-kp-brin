@@ -6,7 +6,7 @@ import numpy as np
 import sys
 from pathlib import Path
 
-MODEL = 'm2'
+MODEL = 'm3'
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]

@@ -2,37 +2,46 @@
 
 #include <keyboard/keyb.h>
 #include <vector>
+#include <string>
 #include <unordered_map>
 #include <std_msgs/Int32MultiArray.h>
 #include <std_msgs/Float64.h>
+#include <std_msgs/Float32.h>
 #include <custom_msg/yolo.h>
-
-#define MANUAL 0
-#define CALIB 1
-#define AUTO 2
-#define NAV 3
+#include <stdbool.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/String.h>
 
 #define VELOCITY 1
 #define POSITION 3
 
+#define RIGHT 1
+#define LEFT 2
+
+#define AFK 0
+#define MANUAL 1
+#define CALIB 2
+#define SCAN 3
+
 class DynamixelBehaviorControl
 {
-public:
+public: 
+  
   DynamixelBehaviorControl()
   {
     client_ = nh_.serviceClient<dynamixel_workbench_msgs::DynamixelCommand>("/dynamixel_workbench/dynamixel_command");
 
     sub_ = nh_.subscribe("/dynamixel_workbench/dynamixel_state", 100, &DynamixelBehaviorControl::stateCallback, this);
-
     key_sub = nh_.subscribe("key", 100, &DynamixelBehaviorControl::keyCallback, this);
+    sub_object_detection = nh_.subscribe("yolo_topic", 1, &DynamixelBehaviorControl::objectDetectionCallback, this);
+    nav_path_sub = nh_.subscribe("/path_radial", 1, &DynamixelBehaviorControl::navPathCallback, this);
+    user_command_sub = nh_.subscribe("user_command", 1, &DynamixelBehaviorControl::userCommandCallback, this);
+    pc_depth_sub = nh_.subscribe("/pc_depth", 1, &DynamixelBehaviorControl::pcDepthCallback, this);
 
     gpio_pub_ = nh_.advertise<std_msgs::Int32MultiArray>("gpio_control", 10);
-
-    sub_object_detection = nh_.subscribe("yolo_topic", 1, &DynamixelBehaviorControl::objectDetectionCallback, this);
-
     servo_mode_pub_ = nh_.advertise<std_msgs::UInt8>("/dynamixel_workbench/mode", 10);
-
-    nav_path_sub = nh_.subscribe("/path_radial", 1, &DynamixelBehaviorControl::navPathCallback, this);
+    pub_nav_flag = nh_.advertise<std_msgs::Bool>("nav_flag", 1);
+    pub_speech = nh_.advertise<std_msgs::String>("out_speech", 1);
 
     // Initialize flags
     key_flags_ = std::vector<bool>(8, false);
@@ -40,6 +49,8 @@ public:
 
     // Initialize timer with 50 Hz frequency
     timer_ = nh_.createTimer(ros::Duration(0.02), &DynamixelBehaviorControl::timerCallback, this);
+    //timer gpio 0.5 Hz
+    timer_gpio = nh_.createTimer(ros::Duration(0.25), &DynamixelBehaviorControl::timerGpioCallback, this);
 
     gpio_msg_nav.data.resize(8);
     gpio_msg.data.resize(8);
@@ -48,6 +59,10 @@ public:
         gpio_msg_nav.data[i] = 0;
         gpio_msg.data[i] = 0;
     }
+    gpio_pub_.publish(gpio_msg_nav);
+
+    
+    printf("PROGRAM STARTO\n");
   }
 
   void stateCallback(const dynamixel_workbench_msgs::DynamixelStateList::ConstPtr& msg)
@@ -68,38 +83,20 @@ public:
 
   void objectDetectionCallback(const custom_msg::yolo::ConstPtr &msg)
   {
-    class_array = msg->class_id;
+    class_array = msg->class_id; //string
     center_x_array = msg->center_x;
     center_y_array = msg->center_y;
-
-    // printf("String Length: %zu\n", class_array.size());
-
-    // for(int i = 0; i < class_array.size(); i++)
-    //   printf("Object %d: %s, center_x: %f, center_y: %f\n", i, class_array[i].c_str(), center_x_array[i], center_y_array[i]);
-    // printf("center_x_array: %f", center_x_array[0]);
-    // ROS_INFO("Object %d: %s", i, msg->detection[i].object_name.c_str());
   }
 
   void navPathCallback(const std_msgs::Float64::ConstPtr &path_msg) //sub dalam derajat
-  {       //0 deg      
-  //      n               
-  //90deg |    -90 deg
-  // w ___|___ e    
-  //      |
-  //      |
-  //      s
-    //mapping gpio 
-    /*
-      0 dan 7 maju  (utara) -22.5 to 22.5
-      3 dan 4 mundur (selatan) 157.5 to -157.5
-      1 dan 2 kiri (barat) 67.5 to 112.5
-      5 dan 6 kanan (timur) -67.5 to -112.5
-      0 dan 1 (barat laut) 22.5 to 67.5
-      6 dan 7 (timur laut) -22.5 to -67.5
-      2 dan 3 (barat daya) 112.5 to 157.5
-      4 dan 5 (tenggara) -112.5 to -157.5
-    */
-    nav_path_deg = path_msg->data;
+  {    
+    nav_path_deg_buf = path_msg->data;
+  }
+
+  void pcDepthCallback(const std_msgs::Float32::ConstPtr &pc_msg)
+  {
+    pc_depth = pc_msg->data; //point cloud depth
+    //printf("pc_depth: %f\n", pc_depth); 
   }
 
   void keyCallback(const keyboard::keyb::ConstPtr& msg) {
@@ -111,21 +108,18 @@ public:
         // {30, 'u'}, {31, 'v'}, {32, 'w'}, {33, 'x'}, {34, 'y'}, {35, 'z'}, {36, '+'}, {37, '-'},
         // {38, 'U'}, {39, 'D'}, {40, 'R'}, {41, 'L'} // Up, Down, Right, Left arrows
 
-    if(mode == MANUAL)
-    {
-      for (size_t i = 0; i < 8; ++i) {
-        if (key_status_[i]) {
-          key_flags_[i] = !key_flags_[i];
-        }
-        gpio_msg.data[i] = key_flags_[i] ? 1 : 0;
-      }
-      gpio_pub_.publish(gpio_msg);
-    }
-
-    
+    // if(mode_nav == MANUAL)
+    // {
+    //   for (size_t i = 0; i < 8; ++i) {
+    //     if (key_status_[i]) {
+    //       key_flags_[i] = !key_flags_[i];
+    //     }
+    //     gpio_msg.data[i] = key_flags_[i] ? 1 : 0;
+    //   }
+    //   gpio_pub_.publish(gpio_msg);
+    // }
 
     // Publish new mode when 'k' or 'p' is pressed
-    std_msgs::UInt8 servo_mode_msg;
     if (key_status_[20] == 1) // 'k' key
     {
       servo_mode_msg.data = VELOCITY; // Velocity control mode
@@ -142,31 +136,75 @@ public:
     }
   }
 
+  void userCommandCallback(const std_msgs::String::ConstPtr &msg)
+  {
+      user_command = msg->data; //printah buat jalan
+      if (!user_command.empty() && user_command == previous_user_command)
+      {
+          flag_command = false;
+      }
+      else
+      {
+          flag_command = true;
+      }
+
+      // Update the previous command
+      previous_user_command = user_command;
+  }
+
   void timerCallback(const ros::TimerEvent&)
-  {    
-    //mode
+  {        
+    //mode berdasarkan user command
+    if (flag_command)
+    {
+        for (const auto& target : object_targets)
+        {
+            if (user_command == target)
+            {
+                pubSpeech("scan " + user_command);
+                mode_nav = SCAN;
+                printf("Scan Mode\n");
+                flag_command = false;
+                resetSpeechFlag();
+                return;
+            }
+        }
+
+        if (user_command == "stop")
+        {
+            mode_nav = CALIB;
+            printf("disuruh stop Mode\n");
+        }
+        else if (user_command.empty())
+        {
+            mode_nav = CALIB;
+            printf("Kosong commandnya cok\n");
+        }
+        else
+        {
+            printf("SALAH WOI\n");
+        }
+
+        flag_command = false;
+    }
+
     if(key_status_[22] == 1) //m
     {
-      mode = MANUAL;
+      mode_nav = MANUAL;
       printf("Manual Mode\n");
     }
     else if(key_status_[23] == 1) //n
     {
-      mode = CALIB;
+      mode_nav = CALIB;
       printf("Calib Mode\n");
     }
     else if(key_status_[24] == 1) //o
     {
-      mode = AUTO;
-      printf("Auto Mode\n");
-    }
-    else if(key_status_[8] == 1) //8
-    {
-      mode = NAV;
-      printf("tes gpio\n");
+      mode_nav = SCAN;
+      printf("SCAN Mode\n");
     }
 
-    switch (mode)
+    switch (mode_nav)
     {
       case MANUAL:
         if(operating_mode == VELOCITY)
@@ -217,9 +255,39 @@ public:
             sendDynamixelCommand(8, "Goal_Position", position_8_ - 20);
           }        
         }
+        for (size_t i = 0; i < 8; ++i) {
+          if (key_status_[i]) {
+          key_flags_[i] = !key_flags_[i];
+          }
+          gpio_msg.data[i] = key_flags_[i] ? 1 : 0;
+          }
+        gpio_pub_.publish(gpio_msg);
+        break;
+      case AFK:
+        sendDynamixelCommand(8, "Goal_Velocity", 0);
+        sendDynamixelCommand(9, "Goal_Velocity", 0);
+        for (int i = 0; i < 8; ++i) {
+          gpio_msg_nav.data[i] = 0;
+          gpio_msg.data[i] = 0;
+        }
+        pos_object = 0;
+        state_object = 0;
+        nav_flag = false;
+        nav_flag_msg.data = nav_flag;
+        pub_nav_flag.publish(nav_flag_msg);
+        gpio_pub_.publish(gpio_msg_nav);
+        velflag = false;
+        m = 0;
+        n = 0;
         break;
       case CALIB:
-        // pid servo by something target position with velocity and position limitiation
+        if(!velflag)
+        {
+          servo_mode_msg.data = VELOCITY; // Velocity control mode
+          servo_mode_pub_.publish(servo_mode_msg);
+          ROS_INFO("Published Velocity Control Mode");
+          velflag = true; 
+        }
         target[0] = 2048;
         target[1] = 2048;
         speed[0] = 10;
@@ -234,84 +302,247 @@ public:
           //change mode to manual after 2 seconds
           if(++time_counter > 100)
           {
-            printf("Change to Manual Mode\n");
-            mode = MANUAL;
-            time_counter = 0;
-          }
-          else
-          {
-            printf("Time Counter: %d\n", time_counter);
-          }   
-        }
-        
-        sendDynamixelCommand(8, "Goal_Velocity", servo_speed[0]);
-        sendDynamixelCommand(9, "Goal_Velocity", servo_speed[1]);
-        break;
-      case AUTO:
-        if(class_array.size() == 0)
-        {
-          if(++time_counter > 100)
-          {
-            target[0] = 2048;
-            target[1] = 2048;
-            speed[0] = 10;
-            speed[1] = 10;
-            pid_servo(target, speed);
-
-            if(fabs(target[0] - position_8_) < 10 && fabs(target[1] - position_9_) < 10)
+            printf("Change to AFK\n");
+            if(!nico)
             {
-              servo_speed[0] = 0;
-              servo_speed[1] = 0;
-            }
-
-          }
-          else
-          {
-            servo_speed[0] = 0;
-            servo_speed[1] = 0;
-            printf("Time Counter: %d\n", time_counter);
-          }
-
-          sendDynamixelCommand(8, "Goal_Velocity", servo_speed[0]);
-          sendDynamixelCommand(9, "Goal_Velocity", servo_speed[1]);
-        }
-        //scan kanan kiri
-        else
-        {
-          time_counter = 0;
-          //jika botol
-          for(int i = 0; i < class_array.size(); i++)
-          {
-            if(class_array[i] == "Bottle")
-            {
-              time_counter = 0;
-              //x y 640 480
-              xcam = center_x_array[i]; 
-              ycam = center_y_array[i]; 
-
-              pid_cam(xcam, ycam, 30, 30);
-
-              if(fabs(err_pan) < 10 && fabs(err_tilt) < 10)
-              {
-                printf("Centered\n");
-                speed_pan = 0;
-                speed_tilt = 0;
-              }
-
-              sendDynamixelCommand(8, "Goal_Velocity", speed_pan);
-              sendDynamixelCommand(9, "Goal_Velocity", speed_tilt);
+              std_msgs::String msg;
+              msg.data = "ready";
+              pub_speech.publish(msg);
+              printf("ready\n");
+              nico = true;
             }
             else
             {
-              sendDynamixelCommand(8, "Goal_Velocity", 0);
-              sendDynamixelCommand(9, "Goal_Velocity", 0);
+              pubSpeech("done");
+              resetSpeechFlag();
+            }
+            mode_nav = AFK;
+            time_counter = 0;
+          }
+        }
+        sendDynamixelCommand(8, "Goal_Velocity", servo_speed[0]);
+        sendDynamixelCommand(9, "Goal_Velocity", servo_speed[1]);
+        break;
+      case SCAN:
+        if (class_array.empty() || std::find(class_array.begin(), class_array.end(), user_command) == class_array.end())
+        { 
+          if (++time_counter > 100)
+          {
+            if (state_pan == 0)
+            {
+              sendDynamixelCommand(8, "Goal_Velocity", 10);
+              if (position_8_ > 3700)
+              {
+                printf("scan kanan\n");
+                state_pan = 1;
+                n++;
+              }
+            }
+            else if (state_pan == 1)
+            {
+              sendDynamixelCommand(8, "Goal_Velocity", -10);
+              if (position_8_ < 1500)
+              {
+                printf("scan kiri\n");
+                n++;
+                if(n >= 2)
+                {
+                  state_pan = 2; 
+                  n = 0;
+                  sendDynamixelCommand(8, "Goal_Velocity", 0);
+                }
+                else
+                  state_pan = 0;
+              }
+            }
+            else if (state_pan == 2 && m == 0)
+            {
+              sendDynamixelCommand(9, "Goal_Velocity", 10);
+              if (position_9_ > 2304)
+              {
+                printf("scan bawah\n");
+                sendDynamixelCommand(9, "Goal_Velocity", 0);
+                state_pan = 0;
+                m = 1;
+              }
+            }
+            else if(state_pan == 2 && m == 1)
+            {
+              sendDynamixelCommand(9, "Goal_Velocity", 10);
+              if (position_9_ > 2560)
+              {
+                printf("scan bawah lagi\n");
+                sendDynamixelCommand(9, "Goal_Velocity", 0);
+                state_pan = 0;
+                m = 2;
+              }
+            } 
+            else if (state_pan == 2 && m == 2)
+            {
+              sendDynamixelCommand(9, "Goal_Velocity", -10);
+              if (position_9_ < 1792)
+              {
+                printf("scan atas\n");
+                sendDynamixelCommand(9, "Goal_Velocity", 0);
+                state_pan = 0;
+                m = 3;
+              }
+            }
+            else if (state_pan == 2 && m == 3)
+            {
+              printf("scan selesai object tidak ditemukan\n");
+              pubSpeech("nfound " + user_command);
+              resetSpeechFlag();
+              mode_nav = CALIB;
+              m = 0;
+              n = 0;
+            }
+	          for(int i = 0; i < 8; i++)
+            {
+              gpio_msg_nav.data[i] = 0;
+            }
+            det = 0;
+	          gpio_pub_.publish(gpio_msg_nav);
+          }
+          else
+          {
+            sendDynamixelCommand(8, "Goal_Velocity", 0);
+            sendDynamixelCommand(9, "Goal_Velocity", 0);
+          }
+        }
+        else
+        {
+          for (size_t i = 0; i < class_array.size(); ++i)
+          {
+            if (class_array[i] == user_command)
+            {
+	            det = 1;
+              time_counter = 0;
+              xcam = center_x_array[i];
+              ycam = center_y_array[i];
+              pid_cam(xcam, ycam, 10, 10);
+
+              if (fabs(err_pan) < 10 && fabs(err_tilt) < 10)
+              {
+                if (position_8_ < 2048 && state_object == 0)
+                {
+                  printf("object disebelah kanan\n");
+                  pubSpeech("right " + user_command);
+                  pos_object = RIGHT;
+                  state_object = 1;
+                }
+                else if (position_8_ > 2048 && state_object == 0)
+                {
+                  printf("object disebelah kiri\n");
+                  pubSpeech("left " + user_command);
+                  pos_object = LEFT;
+                  state_object = 1;
+                }
+              }
+              if (pc_depth < 0.5)
+              {
+		if(++counter_sampai > 100)
+		{
+		        //printf("pc_depth: %f\n", pc_depth);
+		        if (state_nav_flag == 0 && state_object == 2)
+		        {
+		          printf("masuk kriteria sampai\n");
+		          nav_flag = false;
+		          nav_flag_msg.data = nav_flag;
+		          pub_nav_flag.publish(nav_flag_msg);
+		          state_object = 3;
+		          state_nav_flag = 1;
+		        }
+		        if (state_nav_flag == 1 && state_object == 4)
+		        {
+		          if (++time_counter_gpio > 150)
+		          {
+		            printf("beneran sampai ke tujuan hore :)\n");
+		            pubSpeech("success " + user_command);
+		            resetSpeechFlag();
+		            mode_nav = CALIB;
+		            time_counter_gpio = 0;
+		          }
+		          else
+		          {
+		            if (time_counter_gpio % 25 == 0) // Toggle every 1 second
+		            {
+		              printf("toggling gpio\n");
+		              for (int i = 0; i < 8; ++i)
+		              {
+		                gpio_msg_nav.data[i] = (gpio_msg_nav.data[i] == 0) ? 1 : 0;
+		              }
+		            }
+		            gpio_pub_.publish(gpio_msg_nav);
+		          }
+		        }
+		}
+              }
+		else{counter_sampai = 0;}
+              sendDynamixelCommand(8, "Goal_Velocity", speed_pan);
+              sendDynamixelCommand(9, "Goal_Velocity", speed_tilt);
             }
           }
-          
-          
         }
         break;
-      case NAV:    
+    } 
+  }
+  void timerGpioCallback(const ros::TimerEvent&)
+  {
+    nav_path_deg = nav_path_deg_buf;
+
+    counter_toggling++;
+    if (counter_toggling >= 4)
+    {
+      toggle_state = !toggle_state;
+      counter_toggling = 0;
+    }
+
+    if(state_object == 1)
+    {
+      if(pos_object == LEFT)
+      {
+        gpio_msg_nav.data[0] = 1; gpio_msg_nav.data[1] = 1; gpio_msg_nav.data[2] = 1; gpio_msg_nav.data[3] = 1;
+        gpio_msg_nav.data[4] = 0; gpio_msg_nav.data[5] = 0; gpio_msg_nav.data[6] = 0; gpio_msg_nav.data[7] = 0;
+      }
+      else if(pos_object == RIGHT)
+      {
+        gpio_msg_nav.data[0] = 0; gpio_msg_nav.data[1] = 0; gpio_msg_nav.data[2] = 0; gpio_msg_nav.data[3] = 0;
+        gpio_msg_nav.data[4] = 1; gpio_msg_nav.data[5] = 1; gpio_msg_nav.data[6] = 1; gpio_msg_nav.data[7] = 1;
+      }
+
+      //counter 4 detik timer 4Hz
+      if(++time_counter_gpio > 16)
+      {
+        printf("mulai navigasi\n");
+        nav_flag = true;
+        nav_flag_msg.data = nav_flag;
+        pub_nav_flag.publish(nav_flag_msg);
+        resetSpeechFlag();
+        state_object = 2;
+        time_counter_gpio = 0;
+      }
+    }
+    else if(state_object == 3)
+    {
+      if(++time_counter_gpio > 16)
+      {
+        printf("gpio smua mati\n");
+        state_object = 4;
+        time_counter_gpio = 0;
+      }
+      else
+      { 
+        for(int i = 0; i < 8; i++)
+        {
+          gpio_msg_nav.data[i] = 0;
+        }
+      }
+    }
+    else if(state_object == 2 && det == 1)
+    {
+      if(toggle_state)
+      {
         if (nav_path_deg >= -22.5 && nav_path_deg <= 22.5) //north
         {
           gpio_msg_nav.data[0] = 1;
@@ -322,6 +553,7 @@ public:
           gpio_msg_nav.data[4] = 0;
           gpio_msg_nav.data[5] = 0;
           gpio_msg_nav.data[6] = 0;
+          // printf("north\n");
         } 
         else if(nav_path_deg > 22.5 && nav_path_deg < 67.5) //north west
         {
@@ -333,6 +565,7 @@ public:
           gpio_msg_nav.data[5] = 0;
           gpio_msg_nav.data[6] = 0;
           gpio_msg_nav.data[7] = 0;
+          // printf("north west\n");
         }
         else if(nav_path_deg >= 67.5 && nav_path_deg <= 112.5) //west
         {
@@ -344,6 +577,7 @@ public:
           gpio_msg_nav.data[5] = 0;
           gpio_msg_nav.data[6] = 0;
           gpio_msg_nav.data[7] = 0;
+          // printf("west\n");
         }
         else if(nav_path_deg > 112.5 && nav_path_deg < 157.5) //south west
         {
@@ -355,6 +589,7 @@ public:
           gpio_msg_nav.data[5] = 0;
           gpio_msg_nav.data[6] = 0;
           gpio_msg_nav.data[7] = 0;
+          // printf("south west\n");
         }
         else if(nav_path_deg >= 157.5 || nav_path_deg <= -157.5) //south
         {
@@ -366,6 +601,7 @@ public:
           gpio_msg_nav.data[5] = 0;
           gpio_msg_nav.data[6] = 0;
           gpio_msg_nav.data[7] = 0;
+          // printf("south\n");
         }
         else if(nav_path_deg > -157.5 && nav_path_deg < -112.5) //south east
         {
@@ -377,6 +613,7 @@ public:
           gpio_msg_nav.data[3] = 0;
           gpio_msg_nav.data[6] = 0;
           gpio_msg_nav.data[7] = 0;
+          // printf("south east\n");
         }
         else if(nav_path_deg >= -112.5 && nav_path_deg <= -67.5) //east
         {
@@ -388,6 +625,7 @@ public:
           gpio_msg_nav.data[3] = 0;
           gpio_msg_nav.data[4] = 0;
           gpio_msg_nav.data[7] = 0;
+          // printf("east\n");
         }
         else if(nav_path_deg > -67.5 && nav_path_deg < -22.5) //north east
         {
@@ -399,11 +637,19 @@ public:
           gpio_msg_nav.data[3] = 0;
           gpio_msg_nav.data[4] = 0;
           gpio_msg_nav.data[5] = 0;
+          // printf("north east\n");
         }
-
-        gpio_pub_.publish(gpio_msg_nav);
-        break;  
-    } 
+      }
+      else
+      {
+        for(int i = 0; i < 8; i++)
+        {
+          gpio_msg_nav.data[i] = 0;
+        }
+      }
+    }
+    if(mode_nav != MANUAL)
+      gpio_pub_.publish(gpio_msg_nav);
   }
 
   void pid_servo(float tar[2], float set_speed[2])
@@ -490,7 +736,20 @@ public:
     }
   }
 
+  void pubSpeech(const std::string speech)
+  {
+    if(!speech_flag)
+    {
+      speech_msg.data = speech;
+      pub_speech.publish(speech_msg);
+      speech_flag = true;
+    }
+  }
 
+  void resetSpeechFlag()
+  {
+    speech_flag = false;
+  }
 
 private:
   ros::NodeHandle nh_;
@@ -501,12 +760,17 @@ private:
   ros::Subscriber nav_path_sub;
   ros::Publisher gpio_pub_;
   ros::Publisher servo_mode_pub_;
+  ros::Subscriber user_command_sub;
+  ros::Publisher pub_nav_flag;
+  ros::Publisher pub_speech;
+  ros::Subscriber pc_depth_sub;
   ros::Timer timer_;
+  ros::Timer timer_gpio;
   std::vector<bool> key_flags_;
   std::vector<uint8_t> key_status_;
   int position_8_ = 0;
   int position_9_ = 0;
-  uint8_t mode = MANUAL;
+  uint8_t mode_nav = CALIB;
   uint8_t operating_mode = 1;
   float target[2], speed[2];
   float servo_speed[2];
@@ -514,11 +778,54 @@ private:
   std::vector<float> center_x_array, center_y_array;
   std::vector<std::string> class_array;
   double nav_path_deg = 0;
+  double nav_path_deg_buf = 0;
 
   uint32_t time_counter = 0;
+  uint32_t time_counter_gpio = 0;
+  uint32_t counter_sampai = 0;
+  uint32_t counter_tidak_sampai = 0;
 
+  std::string user_command;
+  std::string previous_user_command;
+  // object_nav mode_nav = CALIB;
+
+  uint8_t pos_object = 0;
+  uint8_t state_object = 0;
+  uint8_t state_pan = 0;  
+  // uint8_t state_command = 0;
+  uint8_t state_nav_flag = 0;
+
+  bool nav_flag = false;
+  bool flag_command = false;
+  bool velflag = false;
+  bool speech_flag = false;
+  bool nico = false;
+
+  bool toggle_state = false;
+  uint8_t counter_toggling = 0;
+
+  uint8_t det = 0;
+  
+  std_msgs::Bool nav_flag_msg;
+  std_msgs::UInt8 servo_mode_msg;
+  std_msgs::String speech_msg;
+
+  float pc_depth;
+
+  /*Book
+Bottle
+Chair
+Dispenser
+Door
+Glass
+Laptop
+Person
+Table*/
+  std::string object_targets[9] = {"Book", "Bottle", "Chair", "Dispenser", "Door", "Glass", "Laptop", "Person", "Table"};
   std_msgs::Int32MultiArray gpio_msg_nav;
   std_msgs::Int32MultiArray gpio_msg;
+
+  uint8_t n = 0, m = 0;
 
   //komponen pid cam servo
   float err_pan, err_tilt;
