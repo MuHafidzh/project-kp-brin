@@ -1,4 +1,4 @@
-This is my project for KP in BRIN using ROS Noetic.
+This is my project for KP in BRIN using ROS Noetic. Asisstive robot for navigation of visually impaired person
 
 modify dynamixel workbench so i can use xc330-m288
 
